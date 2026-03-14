@@ -1,0 +1,22 @@
+node_modules/
+
+# Large data files
+data/*.tar
+data/*.tar.*
+data/*.csv
+data/*.json
+data/mlat_extract/
+data/prod_extract/
+
+# Keep viewer data (needed for the app)
+!data/viewer_data.json
+
+# Intermediate render outputs (keep final versions only)
+output/real_basemap_v*.png
+output/real_mlat_v*.png
+output/real_mlat_*.png
+output/test_*.png
+
+# IDE / OS
+.DS_Store
+Thumbs.db

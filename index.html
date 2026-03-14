@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LA Airspace Transformation — Density Map Story</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #050e14;
+    color: #c0dce8;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 48px 24px 32px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 300;
+    color: #e0f0ff;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  header h1 strong { font-weight: 600; color: #80d0ff; }
+  header p {
+    font-size: 14px;
+    opacity: 0.55;
+    line-height: 1.6;
+  }
+
+  /* Timeline */
+  .timeline {
+    position: relative;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, transparent, rgba(80,180,255,0.15) 5%, rgba(80,180,255,0.15) 95%, transparent);
+    transform: translateX(-1px);
+  }
+
+  /* Cards */
+  .card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 64px;
+    gap: 32px;
+  }
+  .card:nth-child(even) { flex-direction: row-reverse; }
+
+  .card-image {
+    flex: 0 0 55%;
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(80,180,255,0.1);
+    background: #0a1820;
+    cursor: pointer;
+    transition: border-color 0.3s;
+  }
+  .card-image:hover { border-color: rgba(80,180,255,0.3); }
+  .card-image img {
+    width: 100%;
+    display: block;
+  }
+  .card-image .badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.7);
+    color: #80d0ff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .card-text {
+    flex: 0 0 38%;
+    padding-top: 16px;
+  }
+  .card-text .year {
+    font-size: 36px;
+    font-weight: 200;
+    color: #60c0f0;
+    margin-bottom: 4px;
+    line-height: 1;
+  }
+  .card-text .label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #4a9ac0;
+    margin-bottom: 12px;
+  }
+  .card-text p {
+    font-size: 14px;
+    line-height: 1.7;
+    opacity: 0.7;
+  }
+  .card-text .data-tag {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid rgba(80,180,255,0.2);
+    color: #6ab0d0;
+  }
+
+  /* Timeline dot */
+  .dot {
+    position: absolute;
+    left: 50%;
+    top: 32px;
+    width: 12px;
+    height: 12px;
+    background: #0a1820;
+    border: 2px solid #4090c0;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+  }
+  .dot.active { background: #4090c0; box-shadow: 0 0 12px rgba(64,144,192,0.4); }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    cursor: zoom-out;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img {
+    max-width: 95vw;
+    max-height: 92vh;
+    border-radius: 4px;
+  }
+
+  /* Comparison slider */
+  .compare-section {
+    max-width: 1100px;
+    margin: 0 auto 80px;
+    padding: 0 24px;
+    text-align: center;
+  }
+  .compare-section h2 {
+    font-size: 20px;
+    font-weight: 300;
+    color: #e0f0ff;
+    margin-bottom: 24px;
+  }
+  .compare-container {
+    position: relative;
+    max-width: 900px;
+    margin: 0 auto;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(80,180,255,0.1);
+    user-select: none;
+  }
+  .compare-container img {
+    width: 100%;
+    display: block;
+  }
+  .compare-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    overflow: hidden;
+    border-right: 2px solid rgba(255,255,255,0.6);
+  }
+  .compare-overlay img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: left;
+  }
+  .compare-handle {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    cursor: ew-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #333;
+    z-index: 5;
+  }
+  .compare-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: 0.5;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Legend */
+  .legend-bar {
+    max-width: 600px;
+    margin: 40px auto 16px;
+    text-align: center;
+  }
+  .legend-bar canvas { border-radius: 3px; }
+  .legend-bar .labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    opacity: 0.4;
+    margin-top: 4px;
+    padding: 0 2px;
+  }
+
+  /* No-images fallback */
+  .no-images {
+    text-align: center;
+    padding: 80px 24px;
+    opacity: 0.4;
+    font-size: 14px;
+  }
+  .no-images code {
+    display: block;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #80d0ff;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .card, .card:nth-child(even) {
+      flex-direction: column;
+    }
+    .card-image, .card-text { flex: 1 1 100%; }
+    .timeline::before { left: 20px; }
+    .dot { left: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>The <strong>Transformation</strong> of LA's Airspace</h1>
+  <p>A density map story — from today's flight corridors through KSMO's closure to the drone age</p>
+</header>
+
+<div class="legend-bar">
+  <canvas id="legendCanvas" width="400" height="14"></canvas>
+  <div class="labels"><span>Low density</span><span>Medium</span><span>High density</span></div>
+</div>
+
+<div class="timeline" id="timeline"></div>
+
+<div class="compare-section" id="compareSection" style="display:none">
+  <h2>Before & After Comparison</h2>
+  <div class="compare-container" id="compareContainer">
+    <img id="compareBase" src="" alt="After">
+    <div class="compare-overlay" id="compareOverlay" style="width:50%">
+      <img id="compareTop" src="" alt="Before">
+    </div>
+    <div class="compare-handle" id="compareHandle" style="left:50%">&#x2194;</div>
+  </div>
+  <div class="compare-labels">
+    <span id="compareLabelLeft">Before</span>
+    <span id="compareLabelRight">After</span>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <img id="lightboxImg" src="" alt="Full size">
+</div>
+
+<script>
+// ============================================================
+// STORY CONFIGURATION
+// Each entry defines a card in the timeline
+// ============================================================
+const STORY = [
+  {
+    year: '2026',
+    label: 'Today — Baseline',
+    image: 'output/real_mlat_20260312.png',
+    fallback: 'output/today.png',
+    badge: 'REAL DATA — MARCH 12, 2026',
+    text: 'The LA Basin as it is today. LAX dominates the center with its parallel east-west approach corridors glowing bright. KSMO (Santa Monica Airport) is still active with general aviation traffic threading through the Westside. Hawthorne and Compton airports add secondary clusters to the south.',
+    dataTag: '53,847 ADS-B positions / 2,336 aircraft',
+  },
+  {
+    year: '2028',
+    label: 'KSMO Peak Exodus',
+    image: 'output/2028_ksmo_peak.png',
+    badge: 'SIMULATED',
+    text: 'The final months before Santa Monica Airport closes. Every aircraft based at KSMO is relocating — the sky above Santa Monica is a swarm of departures in every direction. Traffic radiates outward as planes ferry to Whiteman, Van Nuys, Torrance, and beyond. The busiest KSMO has ever been is its last gasp.',
+    dataTag: 'Simulated scenario',
+  },
+  {
+    year: '2030',
+    label: 'Silence Over Santa Monica',
+    image: 'output/2030_ksmo_closed.png',
+    badge: 'SIMULATED',
+    text: 'KSMO is closed. The airspace above Santa Monica is eerily clear — a dark void where there used to be a constant stream of Cessnas and Gulfstreams. LAX corridors tighten slightly without KSMO\'s traffic flow constraints. The Westside sky belongs to the residents now.',
+    dataTag: 'Simulated scenario',
+  },
+  {
+    year: '2033',
+    label: 'The Drone Hub Emerges',
+    image: 'output/2033_drone_hub.png',
+    badge: 'SIMULATED',
+    text: 'Barker Hangar, once home to private jets and film shoots, has been transformed into an autonomous drone logistics hub. A new radial pattern blooms over Santa Monica — dozens of delivery corridors fanning out in every direction. The traffic is back, but it flies lower, quieter, and unmanned.',
+    dataTag: 'Simulated scenario',
+  },
+];
+
+// ============================================================
+// RENDER TIMELINE
+// ============================================================
+const timeline = document.getElementById('timeline');
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+let loadedImages = 0;
+
+function buildTimeline() {
+  timeline.innerHTML = '';
+
+  STORY.forEach((entry, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const dot = document.createElement('div');
+    dot.className = `dot${i === 0 ? ' active' : ''}`;
+
+    const imageDiv = document.createElement('div');
+    imageDiv.className = 'card-image';
+
+    const img = document.createElement('img');
+    img.alt = `${entry.year} — ${entry.label}`;
+    img.loading = i < 2 ? 'eager' : 'lazy';
+
+    // Try primary image, fall back if needed
+    img.src = entry.image;
+    img.onerror = function() {
+      if (entry.fallback) {
+        this.src = entry.fallback;
+        this.onerror = function() { this.parentElement.style.display = 'none'; };
+      } else {
+        this.parentElement.style.display = 'none';
+      }
+    };
+    img.onload = function() {
+      loadedImages++;
+      if (loadedImages >= 2) setupCompare();
+    };
+
+    const badge = document.createElement('div');
+    badge.className = 'badge';
+    badge.textContent = entry.badge;
+
+    imageDiv.appendChild(img);
+    imageDiv.appendChild(badge);
+    imageDiv.addEventListener('click', () => {
+      lightboxImg.src = img.src;
+      lightbox.classList.add('open');
+    });
+
+    const textDiv = document.createElement('div');
+    textDiv.className = 'card-text';
+    textDiv.innerHTML = `
+      <div class="year">${entry.year}</div>
+      <div class="label">${entry.label}</div>
+      <p>${entry.text}</p>
+      ${entry.dataTag ? `<span class="data-tag">${entry.dataTag}</span>` : ''}
+    `;
+
+    card.appendChild(imageDiv);
+    card.appendChild(textDiv);
+    card.appendChild(dot);
+    timeline.appendChild(card);
+  });
+}
+
+// ============================================================
+// COMPARISON SLIDER
+// ============================================================
+function setupCompare() {
+  if (STORY.length < 2) return;
+
+  const section = document.getElementById('compareSection');
+  const base = document.getElementById('compareBase');
+  const top = document.getElementById('compareTop');
+
+  // Compare first and last images
+  const first = STORY[0];
+  const last = STORY[STORY.length - 1];
+  base.src = last.image;
+  top.src = first.image;
+  base.onerror = () => { if (last.fallback) base.src = last.fallback; };
+  top.onerror = () => { if (first.fallback) top.src = first.fallback; };
+
+  document.getElementById('compareLabelLeft').textContent = `${first.year} — ${first.label}`;
+  document.getElementById('compareLabelRight').textContent = `${last.year} — ${last.label}`;
+
+  section.style.display = 'block';
+
+  // Slider interaction
+  const container = document.getElementById('compareContainer');
+  const overlay = document.getElementById('compareOverlay');
+  const handle = document.getElementById('compareHandle');
+  let dragging = false;
+
+  function setPosition(x) {
+    const rect = container.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
+    overlay.style.width = (pct * 100) + '%';
+    handle.style.left = (pct * 100) + '%';
+  }
+
+  handle.addEventListener('mousedown', () => { dragging = true; });
+  container.addEventListener('mousedown', (e) => { dragging = true; setPosition(e.clientX); });
+  window.addEventListener('mousemove', (e) => { if (dragging) setPosition(e.clientX); });
+  window.addEventListener('mouseup', () => { dragging = false; });
+  container.addEventListener('touchstart', (e) => { dragging = true; setPosition(e.touches[0].clientX); });
+  window.addEventListener('touchmove', (e) => { if (dragging) setPosition(e.touches[0].clientX); });
+  window.addEventListener('touchend', () => { dragging = false; });
+}
+
+// ============================================================
+// LIGHTBOX
+// ============================================================
+lightbox.addEventListener('click', () => { lightbox.classList.remove('open'); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') lightbox.classList.remove('open');
+});
+
+// ============================================================
+// LEGEND
+// ============================================================
+function drawLegend() {
+  const c = document.getElementById('legendCanvas');
+  const ctx = c.getContext('2d');
+  for (let x = 0; x < c.width; x++) {
+    const t = x / c.width;
+    let r, g, b;
+    if (t < 0.25) {
+      const s = t / 0.25;
+      r = 0; g = Math.floor(s * 80); b = Math.floor(s * 40);
+    } else if (t < 0.5) {
+      const s = (t - 0.25) / 0.25;
+      r = Math.floor(s * 60); g = 80 + Math.floor(s * 140); b = 40 - Math.floor(s * 20);
+    } else if (t < 0.75) {
+      const s = (t - 0.5) / 0.25;
+      r = 60 + Math.floor(s * 180); g = 220 + Math.floor(s * 35); b = 20 - Math.floor(s * 10);
+    } else {
+      const s = (t - 0.75) / 0.25;
+      r = 240 + Math.floor(s * 15); g = 255 - Math.floor(s * 180); b = 10;
+    }
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillRect(x, 0, 1, c.height);
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+drawLegend();
+buildTimeline();
+</script>
+</body>
+</html>
