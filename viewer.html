@@ -138,7 +138,7 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
 #type-search:focus { border-color: #4a8aff; }
 
 .cat-row {
-  display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;
+  display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; margin-left: 12px;
 }
 .cat-btn {
   background: #243044; border: 1px solid #2e4060; color: #8ab4ff;
@@ -146,6 +146,21 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
 }
 .cat-btn:hover { background: #2e4060; }
 .cat-btn.active { background: #1a4a80; border-color: #4a8aff; }
+.parent-cat { margin-bottom: 6px; }
+.parent-cat-header {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 4px 0; user-select: none;
+}
+.parent-cat-arrow { font-size: 10px; color: #5a7a9a; transition: transform 0.2s; display: inline-block; }
+.parent-cat-header.collapsed .parent-cat-arrow { transform: rotate(-90deg); }
+.parent-cat-label { font-size: 11px; font-weight: 600; color: #8ab4ff; flex: 1; }
+.parent-cat-toggle {
+  background: #243044; border: 1px solid #2e4060; color: #5a7a9a;
+  width: 20px; height: 20px; border-radius: 3px; font-size: 11px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.parent-cat-toggle:hover { background: #2e4060; }
+.parent-cat-toggle.active { background: #1a4a80; border-color: #4a8aff; color: #8ab4ff; }
 
 #type-list {
   max-height: 280px; overflow-y: auto;
@@ -179,6 +194,33 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Comparison slider */
+#compare-slider {
+  position: absolute; top: 0; bottom: 0; z-index: 15;
+  pointer-events: none; display: none;
+}
+#compare-slider.active { display: block; }
+#compare-line {
+  position: absolute; top: 0; bottom: 0; width: 3px;
+  background: #fff; cursor: ew-resize; pointer-events: auto;
+  box-shadow: 0 0 8px rgba(0,0,0,0.8);
+}
+#compare-handle {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 36px; height: 36px; background: rgba(255,255,255,0.95);
+  border-radius: 50%; cursor: ew-resize; pointer-events: auto;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  font-size: 16px; color: #333; user-select: none;
+}
+#compare-label-left, #compare-label-right {
+  position: absolute; top: 12px; padding: 4px 12px;
+  background: rgba(0,0,0,0.7); color: #fff; font-size: 13px;
+  border-radius: 4px; pointer-events: none; font-weight: bold;
+}
+#compare-label-left { left: 12px; }
+#compare-label-right { right: 12px; }
 </style>
 </head>
 <body>
@@ -190,6 +232,13 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
 
 <div id="canvas-container">
   <canvas id="density-canvas" width="1920" height="1080"></canvas>
+  <div id="compare-slider">
+    <div id="compare-line">
+      <div id="compare-handle">&#x2194;</div>
+    </div>
+    <div id="compare-label-left">2029</div>
+    <div id="compare-label-right">Today</div>
+  </div>
 </div>
 
 <button id="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
@@ -203,6 +252,40 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
 
 <div id="sidebar">
   <div class="panel">
+    <h3>Scenario</h3>
+    <select id="scenario-select" style="width:100%; padding:6px; background:#1a2535; color:#c8d8e8; border:1px solid #2a3a50; border-radius:4px; font-size:13px; cursor:pointer; margin-bottom:6px;">
+      <option value="viewer_data.json">Today (2026)</option>
+      <option value="viewer_data_2028.json">2028 — Santa Monica Airport Exodus</option>
+      <option value="viewer_data_2029.json">2029 — Santa Monica Airport Closed</option>
+      <option value="viewer_data_2033.json">2033 — Barker Hangar turns into a Drone Hub</option>
+      <option value="viewer_data_2038.json">2038 — Drone Hubs Across LA Basin</option>
+    </select>
+    <button id="compare-btn" class="preset-btn" style="width:100%; padding:6px;">Compare</button>
+    <div id="compare-controls" style="display:none; margin-top:6px;">
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+        <span style="font-size:11px; color:#8ab4ff; min-width:12px;">A</span>
+        <select id="compare-a" style="flex:1; padding:4px; background:#1a2535; color:#c8d8e8; border:1px solid #2a3a50; border-radius:4px; font-size:12px; cursor:pointer;">
+          <option value="viewer_data.json">Today (2026)</option>
+          <option value="viewer_data_2028.json">2028 — Santa Monica Airport Exodus</option>
+          <option value="viewer_data_2029.json">2029 — Santa Monica Airport Closed</option>
+          <option value="viewer_data_2033.json">2033 — Barker Hangar turns into a Drone Hub</option>
+          <option value="viewer_data_2038.json">2038 — Drone Hubs Across LA Basin</option>
+        </select>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:11px; color:#8ab4ff; min-width:12px;">B</span>
+        <select id="compare-b" style="flex:1; padding:4px; background:#1a2535; color:#c8d8e8; border:1px solid #2a3a50; border-radius:4px; font-size:12px; cursor:pointer;">
+          <option value="viewer_data.json">Today (2026)</option>
+          <option value="viewer_data_2028.json">2028 — Santa Monica Airport Exodus</option>
+          <option value="viewer_data_2029.json" selected>2029 — Santa Monica Airport Closed</option>
+          <option value="viewer_data_2033.json">2033 — Barker Hangar turns into a Drone Hub</option>
+          <option value="viewer_data_2038.json">2038 — Drone Hubs Across LA Basin</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
     <h3>Color Gradient</h3>
     <div class="preset-row" id="gradient-presets"></div>
     <div class="gradient-preview" id="gradient-preview"></div>
@@ -213,34 +296,66 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
     <h3>Rendering</h3>
     <div class="slider-row">
       <label>Opacity</label>
-      <input type="range" id="sl-opacity" min="10" max="100" value="45">
-      <span class="val" id="vl-opacity">0.45</span>
+      <input type="range" id="sl-opacity" min="10" max="100" value="88">
+      <span class="val" id="vl-opacity">0.88</span>
     </div>
     <div class="slider-row">
       <label>Glow</label>
-      <input type="range" id="sl-glow" min="0" max="50" value="15">
-      <span class="val" id="vl-glow">0.15</span>
+      <input type="range" id="sl-glow" min="0" max="50" value="19">
+      <span class="val" id="vl-glow">0.19</span>
     </div>
     <div class="slider-row">
       <label>Blur Radius</label>
-      <input type="range" id="sl-blur" min="1" max="20" value="8">
-      <span class="val" id="vl-blur">8</span>
+      <input type="range" id="sl-blur" min="1" max="20" value="3">
+      <span class="val" id="vl-blur">3</span>
     </div>
     <div class="slider-row">
       <label>Detail %ile</label>
-      <input type="range" id="sl-detailpct" min="80" max="100" value="96">
-      <span class="val" id="vl-detailpct">96</span>
+      <input type="range" id="sl-detailpct" min="80" max="100" value="95">
+      <span class="val" id="vl-detailpct">95</span>
     </div>
     <div class="slider-row">
       <label>Glow %ile</label>
-      <input type="range" id="sl-glowpct" min="80" max="100" value="93">
-      <span class="val" id="vl-glowpct">93</span>
+      <input type="range" id="sl-glowpct" min="80" max="100" value="90">
+      <span class="val" id="vl-glowpct">90</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Overlays</h3>
+    <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; margin-bottom:4px;">
+      <input type="checkbox" id="show-zones"> Show Residential Zones
+    </label>
+    <div id="zone-legend" style="display:none; font-size:10px; margin-bottom:4px; padding:4px; background:#1a2535; border-radius:4px;">
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;"><span style="display:inline-block;width:12px;height:12px;background:rgba(255,100,100,0.5);border-radius:2px;"></span> Multi-family residential (R3/R4)</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;"><span style="display:inline-block;width:12px;height:12px;background:rgba(255,180,60,0.5);border-radius:2px;"></span> Mixed (SF + MF)</div>
+      <div style="display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:12px;height:12px;background:rgba(100,200,255,0.5);border-radius:2px;"></span> Single-family residential</div>
+      <div style="margin-top:3px;color:#5a7a9a;font-size:9px;">Source: LA City Planning ZIMAS<br>5,815 parcels · 200m grid</div>
     </div>
   </div>
 
   <div class="panel">
     <h3>Aircraft Filter</h3>
-    <div class="cat-row" id="cat-buttons"></div>
+    <div style="display:flex; gap:4px; margin-bottom:6px;">
+      <button class="cat-btn active" id="filter-all" style="flex:1;">All</button>
+      <button class="cat-btn" id="filter-none" style="flex:1;">None</button>
+    </div>
+    <div class="parent-cat" id="parent-manned">
+      <div class="parent-cat-header" data-parent="manned">
+        <span class="parent-cat-arrow">&#9662;</span>
+        <span class="parent-cat-label">Manned Aircraft</span>
+        <span class="parent-cat-toggle" data-parent="manned" title="Toggle all manned">&#10003;</span>
+      </div>
+      <div class="cat-row" id="cat-buttons-manned"></div>
+    </div>
+    <div class="parent-cat" id="parent-drone">
+      <div class="parent-cat-header" data-parent="drone">
+        <span class="parent-cat-arrow">&#9662;</span>
+        <span class="parent-cat-label">Drone</span>
+        <span class="parent-cat-toggle" data-parent="drone" title="Toggle all drones">&#10003;</span>
+      </div>
+      <div class="cat-row" id="cat-buttons-drone"></div>
+    </div>
     <input type="text" id="type-search" placeholder="Search types...">
     <div id="type-list"></div>
   </div>
@@ -260,13 +375,20 @@ const ctx = canvas.getContext('2d');
 
 // Rendering params
 let params = {
-  detailOpacity: 0.45,
-  glowOpacity: 0.15,
-  blurRadius: 8,
-  detailNormPct: 96,
-  glowNormPct: 93,
+  detailOpacity: 0.88,
+  glowOpacity: 0.19,
+  blurRadius: 3,
+  detailNormPct: 95,
+  glowNormPct: 90,
   pixelSpacing: 1.5,
 };
+
+// Compare mode state
+let compareMode = false;
+let compareX = 0.5; // 0-1, split position
+let compareCanvasLeft = null;  // offscreen canvas for left (selected scenario)
+let compareCanvasRight = null; // offscreen canvas for right (today)
+let DATA_CACHE = {}; // cache loaded scenario data by filename
 
 // Active types (all on by default)
 let activeTypes = new Set();
@@ -276,6 +398,7 @@ let renderPending = false;
 let zoom = 1;
 let panX = 0, panY = 0;
 let isDragging = false;
+let compareDragging = false;
 let dragStartX, dragStartY, panStartX, panStartY;
 const container = document.getElementById('canvas-container');
 
@@ -325,6 +448,7 @@ container.addEventListener('wheel', (e) => {
 // Pan with mouse drag
 container.addEventListener('mousedown', (e) => {
   if (e.button !== 0) return;
+  if (compareDragging) return;
   isDragging = true;
   dragStartX = e.clientX; dragStartY = e.clientY;
   panStartX = panX; panStartY = panY;
@@ -444,6 +568,55 @@ function colorFromStops(v, stops) {
 }
 
 // ============================================================
+// RESIDENTIAL ZONES — real LA City zoning data from ZIMAS/GeoHub
+// Grid cells ~200m, sourced from 5,815 parcel polygons
+// ============================================================
+let showZones = false;
+let ZONE_GRID = null; // loaded on demand
+
+async function loadZoneGrid() {
+  if (ZONE_GRID) return;
+  const resp = await fetch('data/la_residential_grid.json');
+  ZONE_GRID = await resp.json();
+  console.log(`Loaded zoning grid: ${ZONE_GRID.cells.length} cells, ${ZONE_GRID.stats.totalParcels} parcels`);
+}
+
+// Colors: 0=SF (blue), 1=mixed (orange), 2=MF (red)
+const ZONE_FILL = [
+  'rgba(100, 200, 255, 0.35)',   // SF — blue
+  'rgba(255, 180, 60, 0.35)',    // mixed — orange
+  'rgba(255, 100, 100, 0.4)',    // MF — red
+];
+
+function drawZones(ctx, bounds, mercNorth, mercSouth, latToMercY) {
+  if (!ZONE_GRID) return;
+  const cs = ZONE_GRID.cellSize;
+  const half = cs / 2;
+
+  for (const cell of ZONE_GRID.cells) {
+    const lat = cell.lat;
+    const lon = cell.lon;
+
+    // Cell corners
+    const x0 = ((lon - half - bounds.west) / (bounds.east - bounds.west)) * W;
+    const x1 = ((lon + half - bounds.west) / (bounds.east - bounds.west)) * W;
+    const mercY0 = latToMercY(lat + half);
+    const mercY1 = latToMercY(lat - half);
+    const y0 = ((mercNorth - mercY0) / (mercNorth - mercSouth)) * H;
+    const y1 = ((mercNorth - mercY1) / (mercNorth - mercSouth)) * H;
+
+    // Alpha based on intensity
+    const alpha = 0.15 + cell.i * 0.45;
+    const baseColor = ZONE_FILL[cell.d];
+    // Override alpha
+    const color = baseColor.replace(/[\d.]+\)$/, alpha.toFixed(2) + ')');
+
+    ctx.fillStyle = color;
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  }
+}
+
+// ============================================================
 // RENDERING
 // ============================================================
 function render() {
@@ -467,6 +640,11 @@ function render() {
   const latToMercY = (lat) => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
   const mercNorth = latToMercY(bounds.north);
   const mercSouth = latToMercY(bounds.south);
+
+  // Draw residential zones if enabled
+  if (showZones) {
+    drawZones(ctx, bounds, mercNorth, mercSouth, latToMercY);
+  }
 
   // Build paths as pixel coords (Web Mercator projection)
   const allPaths = [];
@@ -621,8 +799,158 @@ function requestRender() {
   renderPending = true;
   requestAnimationFrame(() => {
     renderPending = false;
-    render();
+    if (compareMode) renderCompare();
+    else render();
   });
+}
+
+// ============================================================
+// COMPARE MODE
+// ============================================================
+function renderToOffscreen(data) {
+  const saved = DATA;
+  const savedTypes = activeTypes;
+  DATA = data;
+  activeTypes = new Set(Object.keys(data.types));
+  activeTypes.add('UNKNOWN');
+
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = W;
+  offCanvas.height = H;
+  const offCtx = offCanvas.getContext('2d');
+
+  // Swap ctx temporarily
+  const origCtx = ctx;
+  const origCanvas = canvas;
+
+  // Render to main canvas then copy
+  render();
+  offCtx.drawImage(canvas, 0, 0);
+
+  // Restore
+  DATA = saved;
+  activeTypes = savedTypes;
+  return offCanvas;
+}
+
+function renderCompare() {
+  if (!compareCanvasLeft || !compareCanvasRight) return;
+
+  // Draw right side (today) fully
+  ctx.drawImage(compareCanvasRight, 0, 0);
+
+  // Draw left side (2029) clipped
+  const splitPx = Math.round(compareX * W);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, splitPx, H);
+  ctx.clip();
+  ctx.drawImage(compareCanvasLeft, 0, 0);
+  ctx.restore();
+
+  // Draw split line
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(splitPx, 0);
+  ctx.lineTo(splitPx, H);
+  ctx.stroke();
+
+  fitCanvas();
+}
+
+function updateCompareSliderPosition() {
+  const slider = document.getElementById('compare-slider');
+  const ctr = document.getElementById('canvas-container');
+  const rect = canvas.getBoundingClientRect();
+
+  // Position the slider line at the split point in screen coords
+  const screenX = rect.left - ctr.getBoundingClientRect().left + rect.width * compareX;
+  const line = document.getElementById('compare-line');
+  line.style.left = screenX + 'px';
+
+  // Position labels
+  const lblLeft = document.getElementById('compare-label-left');
+  const lblRight = document.getElementById('compare-label-right');
+  lblLeft.style.left = (screenX - 100) + 'px';
+  lblRight.style.left = (screenX + 12) + 'px';
+}
+
+function getScenarioLabel(selectEl) {
+  return selectEl.options[selectEl.selectedIndex].textContent;
+}
+
+function getShortLabel(label) {
+  const m = label.match(/\d{4}/);
+  return m ? m[0] : label;
+}
+
+async function loadScenarioData(filename) {
+  if (!DATA_CACHE[filename]) {
+    const resp = await fetch('data/' + filename);
+    DATA_CACHE[filename] = await resp.json();
+  }
+  return DATA_CACHE[filename];
+}
+
+async function enterCompareMode() {
+  compareMode = true;
+  const slider = document.getElementById('compare-slider');
+  slider.classList.add('active');
+  const btn = document.getElementById('compare-btn');
+  btn.classList.add('active');
+  btn.textContent = 'Exit Compare';
+
+  // Show A/B dropdowns
+  document.getElementById('compare-controls').style.display = 'block';
+
+  // Reset zoom for compare
+  zoom = 1; panX = 0; panY = 0;
+  fitCanvas(); updateZoomLabel();
+
+  await renderCompareFromDropdowns();
+}
+
+async function renderCompareFromDropdowns() {
+  const loading = document.getElementById('loading');
+  const loadStatus = document.getElementById('load-status');
+
+  const selA = document.getElementById('compare-a');
+  const selB = document.getElementById('compare-b');
+  const fileA = selA.value;
+  const fileB = selB.value;
+  const labelA = getScenarioLabel(selA);
+  const labelB = getScenarioLabel(selB);
+
+  loading.style.display = 'flex';
+
+  loadStatus.textContent = `Rendering ${labelA}...`;
+  const dataA = await loadScenarioData(fileA);
+  compareCanvasLeft = renderToOffscreen(dataA);
+
+  loadStatus.textContent = `Rendering ${labelB}...`;
+  const dataB = await loadScenarioData(fileB);
+  compareCanvasRight = renderToOffscreen(dataB);
+
+  // Update slider labels
+  document.getElementById('compare-label-left').textContent = getShortLabel(labelA);
+  document.getElementById('compare-label-right').textContent = getShortLabel(labelB);
+
+  loading.style.display = 'none';
+
+  compareX = 0.5;
+  renderCompare();
+  updateCompareSliderPosition();
+}
+
+function exitCompareMode() {
+  compareMode = false;
+  document.getElementById('compare-slider').classList.remove('active');
+  const btn = document.getElementById('compare-btn');
+  btn.classList.remove('active');
+  btn.textContent = 'Compare';
+  document.getElementById('compare-controls').style.display = 'none';
+  render();
 }
 
 // ============================================================
@@ -718,49 +1046,125 @@ function buildTypeFilter() {
   if (!DATA) return;
   const types = DATA.types;
 
-  // Category buttons
-  const catContainer = document.getElementById('cat-buttons');
-  const cats = [
-    { key: 'all', label: 'All' },
+  // Parent categories: manned vs drone
+  const mannedCats = [
     { key: 'commercial', label: 'Commercial' },
     { key: 'ga', label: 'GA' },
     { key: 'helicopter', label: 'Helicopter' },
     { key: 'military', label: 'Military' },
     { key: 'other', label: 'Other' },
-    { key: 'none', label: 'None' },
+  ];
+  const droneCats = [
+    { key: 'drone', label: 'Wing Drone' },
   ];
 
-  for (const cat of cats) {
-    const btn = document.createElement('button');
-    btn.className = 'cat-btn' + (cat.key === 'all' ? ' active' : '');
-    btn.textContent = cat.label;
-    btn.onclick = () => {
-      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      if (cat.key === 'all') {
-        activeTypes = new Set(Object.keys(types));
-        activeTypes.add('UNKNOWN');
-      } else if (cat.key === 'none') {
-        activeTypes = new Set();
+  function getTypesForCat(catKey) {
+    const s = new Set();
+    for (const [t, info] of Object.entries(types)) {
+      if (info.category === catKey) s.add(t);
+    }
+    return s;
+  }
+  function getTypesForParent(parentKey) {
+    const cats = parentKey === 'manned' ? mannedCats : droneCats;
+    const s = new Set();
+    for (const cat of cats) {
+      for (const t of getTypesForCat(cat.key)) s.add(t);
+    }
+    // "other" and "UNKNOWN" go to manned
+    if (parentKey === 'manned') {
+      for (const [t, info] of Object.entries(types)) {
+        if (!['drone'].includes(info.category)) s.add(t);
+      }
+      s.add('UNKNOWN');
+    }
+    return s;
+  }
+
+  function clearAllActive() {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('filter-all').classList.remove('active');
+    document.getElementById('filter-none').classList.remove('active');
+  }
+
+  function buildCatButtons(container, cats) {
+    container.innerHTML = '';
+    for (const cat of cats) {
+      const btn = document.createElement('button');
+      btn.className = 'cat-btn';
+      btn.textContent = cat.label;
+      btn.onclick = () => {
+        clearAllActive();
+        btn.classList.add('active');
+        activeTypes = getTypesForCat(cat.key);
+        updateTypeCheckboxes();
+        requestRender();
+      };
+      container.appendChild(btn);
+    }
+  }
+
+  buildCatButtons(document.getElementById('cat-buttons-manned'), mannedCats);
+  buildCatButtons(document.getElementById('cat-buttons-drone'), droneCats);
+
+  // All / None buttons
+  document.getElementById('filter-all').onclick = () => {
+    clearAllActive();
+    document.getElementById('filter-all').classList.add('active');
+    activeTypes = new Set(Object.keys(types));
+    activeTypes.add('UNKNOWN');
+    updateTypeCheckboxes();
+    requestRender();
+  };
+  document.getElementById('filter-none').onclick = () => {
+    clearAllActive();
+    document.getElementById('filter-none').classList.add('active');
+    activeTypes = new Set();
+    updateTypeCheckboxes();
+    requestRender();
+  };
+
+  // Parent toggle buttons (checkmark = select all in parent)
+  document.querySelectorAll('.parent-cat-toggle').forEach(tog => {
+    tog.onclick = (e) => {
+      e.stopPropagation();
+      clearAllActive();
+      const parent = tog.dataset.parent;
+      const parentTypes = getTypesForParent(parent);
+      // Toggle: if all parent types are active, remove them; otherwise add them
+      const allOn = [...parentTypes].every(t => activeTypes.has(t));
+      if (allOn) {
+        for (const t of parentTypes) activeTypes.delete(t);
       } else {
-        activeTypes = new Set();
-        for (const [t, info] of Object.entries(types)) {
-          if (info.category === cat.key) activeTypes.add(t);
-        }
+        for (const t of parentTypes) activeTypes.add(t);
       }
       updateTypeCheckboxes();
       requestRender();
     };
-    catContainer.appendChild(btn);
-  }
+  });
+
+  // Collapse/expand parent categories
+  document.querySelectorAll('.parent-cat-header').forEach(hdr => {
+    hdr.addEventListener('click', (e) => {
+      if (e.target.classList.contains('parent-cat-toggle')) return;
+      hdr.classList.toggle('collapsed');
+      const catRow = hdr.nextElementSibling;
+      catRow.style.display = hdr.classList.contains('collapsed') ? 'none' : 'flex';
+    });
+  });
 
   // Type list
   renderTypeList('');
 
-  // Search
-  document.getElementById('type-search').addEventListener('input', (e) => {
-    renderTypeList(e.target.value.toUpperCase());
-  });
+  // Search (only attach once)
+  const searchEl = document.getElementById('type-search');
+  searchEl.value = '';
+  if (!searchEl._bound) {
+    searchEl.addEventListener('input', (e) => {
+      renderTypeList(e.target.value.toUpperCase());
+    });
+    searchEl._bound = true;
+  }
 }
 
 function renderTypeList(filter) {
@@ -807,6 +1211,25 @@ function updateTypeCheckboxes() {
 // ============================================================
 // INIT
 // ============================================================
+async function loadScenario(filename) {
+  const loading = document.getElementById('loading');
+  const loadStatus = document.getElementById('load-status');
+  loading.style.display = 'flex';
+  loadStatus.textContent = 'Loading flight data...';
+
+  const resp = await fetch('data/' + filename);
+  DATA = await resp.json();
+
+  // Re-initialize active types (all on)
+  activeTypes = new Set(Object.keys(DATA.types));
+  activeTypes.add('UNKNOWN');
+
+  buildTypeFilter();
+
+  loading.style.display = 'none';
+  render();
+}
+
 async function init() {
   const loadStatus = document.getElementById('load-status');
 
@@ -833,6 +1256,63 @@ async function init() {
   buildGradientUI();
   setupSliders();
   buildTypeFilter();
+
+  // Scenario selector
+  document.getElementById('scenario-select').addEventListener('change', (e) => {
+    if (compareMode) exitCompareMode();
+    loadScenario(e.target.value);
+  });
+
+  // Zone overlay toggle
+  const zoneCheckbox = document.getElementById('show-zones');
+  const zoneLegend = document.getElementById('zone-legend');
+  zoneCheckbox.addEventListener('change', async () => {
+    showZones = zoneCheckbox.checked;
+    zoneLegend.style.display = showZones ? 'block' : 'none';
+    if (showZones) await loadZoneGrid();
+    requestRender();
+  });
+
+  // Compare button
+  document.getElementById('compare-btn').addEventListener('click', () => {
+    if (compareMode) exitCompareMode();
+    else enterCompareMode();
+  });
+
+  // Compare A/B dropdown changes — re-render when changed during compare mode
+  document.getElementById('compare-a').addEventListener('change', () => {
+    if (compareMode) renderCompareFromDropdowns();
+  });
+  document.getElementById('compare-b').addEventListener('change', () => {
+    if (compareMode) renderCompareFromDropdowns();
+  });
+
+  // Compare slider drag
+  const compareLine = document.getElementById('compare-line');
+
+  const onCompareMove = (e) => {
+    if (!compareDragging || !compareMode) return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    compareX = Math.max(0.02, Math.min(0.98, (clientX - rect.left) / rect.width));
+    renderCompare();
+    updateCompareSliderPosition();
+  };
+
+  compareLine.addEventListener('mousedown', (e) => {
+    compareDragging = true;
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  compareLine.addEventListener('touchstart', (e) => {
+    compareDragging = true;
+    e.stopPropagation();
+  }, { passive: false });
+  window.addEventListener('mousemove', onCompareMove);
+  window.addEventListener('touchmove', onCompareMove, { passive: false });
+  window.addEventListener('mouseup', () => { compareDragging = false; });
+  window.addEventListener('touchend', () => { compareDragging = false; });
 
   // Hide loading screen
   document.getElementById('loading').style.display = 'none';

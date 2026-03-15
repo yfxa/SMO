@@ -8,8 +8,17 @@ data/*.json
 data/mlat_extract/
 data/prod_extract/
 
-# Keep viewer data (needed for the app)
+# Keep viewer data and scenario files (needed for the app)
 !data/viewer_data.json
+!data/viewer_data_2028.json
+!data/viewer_data_2029.json
+!data/viewer_data_2033.json
+!data/viewer_data_2038.json
+!data/la_residential_grid.json
+!data/la_residential_basin_grid.json
+
+# Large raw zoning files (too big for GitHub, can be regenerated)
+data/*.geojson
 
 # Intermediate render outputs (keep final versions only)
 output/real_basemap_v*.png
