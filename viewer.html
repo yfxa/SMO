@@ -797,11 +797,28 @@ function render() {
 function requestRender() {
   if (renderPending) return;
   renderPending = true;
-  requestAnimationFrame(() => {
+  requestAnimationFrame(async () => {
     renderPending = false;
-    if (compareMode) renderCompare();
-    else render();
+    if (compareMode) {
+      await refreshCompareCanvases();
+      renderCompare();
+    } else {
+      render();
+    }
   });
+}
+
+async function refreshCompareCanvases() {
+  const selA = document.getElementById('compare-a');
+  const selB = document.getElementById('compare-b');
+  const fileA = selA.value;
+  const fileB = selB.value;
+
+  const dataA = await loadScenarioData(fileA);
+  compareCanvasLeft = renderToOffscreen(dataA);
+
+  const dataB = await loadScenarioData(fileB);
+  compareCanvasRight = renderToOffscreen(dataB);
 }
 
 // ============================================================
@@ -809,27 +826,19 @@ function requestRender() {
 // ============================================================
 function renderToOffscreen(data) {
   const saved = DATA;
-  const savedTypes = activeTypes;
   DATA = data;
-  activeTypes = new Set(Object.keys(data.types));
-  activeTypes.add('UNKNOWN');
 
   const offCanvas = document.createElement('canvas');
   offCanvas.width = W;
   offCanvas.height = H;
   const offCtx = offCanvas.getContext('2d');
 
-  // Swap ctx temporarily
-  const origCtx = ctx;
-  const origCanvas = canvas;
-
-  // Render to main canvas then copy
+  // Render to main canvas then copy (activeTypes stays as user set it)
   render();
   offCtx.drawImage(canvas, 0, 0);
 
   // Restore
   DATA = saved;
-  activeTypes = savedTypes;
   return offCanvas;
 }
 
