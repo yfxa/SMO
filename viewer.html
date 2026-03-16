@@ -374,10 +374,6 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
 
   <div class="panel">
     <h3>Aircraft Filter</h3>
-    <div style="display:flex; gap:4px; margin-bottom:6px;">
-      <button class="cat-btn active" id="filter-all" style="flex:1;">All</button>
-      <button class="cat-btn" id="filter-none" style="flex:1;">None</button>
-    </div>
     <input type="text" id="type-search" placeholder="Search types...">
     <div id="type-list"></div>
   </div>
@@ -1076,23 +1072,6 @@ function setupSliders() {
 function buildTypeFilter() {
   if (!DATA) return;
   const types = DATA.types;
-
-  // All / None buttons
-  document.getElementById('filter-all').onclick = () => {
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('filter-all').classList.add('active');
-    activeTypes = new Set(Object.keys(types));
-    activeTypes.add('UNKNOWN');
-    renderTypeList(document.getElementById('type-search').value.toUpperCase());
-    requestRender();
-  };
-  document.getElementById('filter-none').onclick = () => {
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('filter-none').classList.add('active');
-    activeTypes = new Set();
-    renderTypeList(document.getElementById('type-search').value.toUpperCase());
-    requestRender();
-  };
 
   // Type list
   renderTypeList('');
