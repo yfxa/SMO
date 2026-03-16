@@ -1154,9 +1154,9 @@ function renderTypeList(filter) {
     return row;
   }
 
-  function buildGroup(key, label, items, subcats) {
+  function buildGroup(key, label, items, subcats, alwaysShow) {
     const filtered = applyFilter(items);
-    if (filtered.length === 0) return;
+    if (filtered.length === 0 && !alwaysShow) return;
 
     const totalFlights = filtered.reduce((s, [, info]) => s + info.flights, 0);
 
@@ -1218,8 +1218,8 @@ function renderTypeList(filter) {
     });
   }
 
-  buildGroup('manned', 'Manned Aircraft', manned, MANNED_SUBCATS);
-  buildGroup('drone', 'Drone', drone, DRONE_SUBCATS);
+  buildGroup('manned', 'Manned Aircraft', manned, MANNED_SUBCATS, false);
+  buildGroup('drone', 'Drone', drone, DRONE_SUBCATS, true);
 }
 
 function updateTypeCheckboxes() {
