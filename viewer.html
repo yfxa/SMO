@@ -221,6 +221,34 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
 }
 #compare-label-left { left: 12px; }
 #compare-label-right { right: 12px; }
+
+/* ---- Mobile responsive ---- */
+@media (max-width: 768px) {
+  #sidebar {
+    width: 100%;
+    top: 0; right: 0; bottom: 0;
+    max-height: 100vh;
+    padding: 12px;
+    gap: 10px;
+  }
+  #sidebar.collapsed { transform: translateX(100%); }
+  #sidebar-toggle {
+    right: 12px;
+    top: 10px;
+    width: 36px; height: 36px;
+    font-size: 18px;
+  }
+  #sidebar-toggle:not(.collapsed) { right: 12px; }
+  .panel { padding: 10px; }
+  .panel h3 { font-size: 11px; margin-bottom: 6px; }
+  .slider-row label { width: 70px; font-size: 11px; }
+  .slider-row .val { width: 30px; font-size: 10px; }
+  #type-list { max-height: 180px; }
+  #zoom-controls { bottom: 10px; left: 10px; }
+  #zoom-controls button { width: 36px; height: 36px; font-size: 18px; }
+  #status { display: none; }
+  #compare-label-left, #compare-label-right { font-size: 11px; padding: 3px 8px; }
+}
 </style>
 </head>
 <body>
@@ -254,32 +282,35 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
   <div class="panel">
     <h3>Scenario</h3>
     <select id="scenario-select" style="width:100%; padding:6px; background:#1a2535; color:#c8d8e8; border:1px solid #2a3a50; border-radius:4px; font-size:13px; cursor:pointer; margin-bottom:6px;">
-      <option value="viewer_data.json">Today (2026)</option>
-      <option value="viewer_data_2028.json">2028 — Santa Monica Airport Exodus</option>
-      <option value="viewer_data_2029.json">2029 — Santa Monica Airport Closed</option>
-      <option value="viewer_data_2033.json">2033 — Barker Hangar turns into a Drone Hub</option>
-      <option value="viewer_data_2038.json">2038 — Drone Hubs Across LA Basin</option>
+      <option value="viewer_data.json">2026 — Today</option>
+      <option value="viewer_data_2028.json">2028 — SMO Exodus</option>
+      <option value="viewer_data_2029.json">2029 — SMO Closed</option>
+      <option value="viewer_data_2033.json">2033 — Barker Hangar Turns Drone Hub</option>
+      <option value="viewer_data_2038.json">2038 — Drone Hubs Spring</option>
+      <option value="viewer_data_2066.json">2066 — The Cross</option>
     </select>
     <button id="compare-btn" class="preset-btn" style="width:100%; padding:6px;">Compare</button>
     <div id="compare-controls" style="display:none; margin-top:6px;">
       <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
         <span style="font-size:11px; color:#8ab4ff; min-width:12px;">A</span>
         <select id="compare-a" style="flex:1; padding:4px; background:#1a2535; color:#c8d8e8; border:1px solid #2a3a50; border-radius:4px; font-size:12px; cursor:pointer;">
-          <option value="viewer_data.json">Today (2026)</option>
-          <option value="viewer_data_2028.json">2028 — Santa Monica Airport Exodus</option>
-          <option value="viewer_data_2029.json">2029 — Santa Monica Airport Closed</option>
-          <option value="viewer_data_2033.json">2033 — Barker Hangar turns into a Drone Hub</option>
-          <option value="viewer_data_2038.json">2038 — Drone Hubs Across LA Basin</option>
+          <option value="viewer_data.json">2026 — Today</option>
+          <option value="viewer_data_2028.json">2028 — SMO Exodus</option>
+          <option value="viewer_data_2029.json">2029 — SMO Closed</option>
+          <option value="viewer_data_2033.json">2033 — Barker Hangar Turns Drone Hub</option>
+          <option value="viewer_data_2038.json">2038 — Drone Hubs Spring</option>
+          <option value="viewer_data_2066.json">2066 — The Cross</option>
         </select>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
         <span style="font-size:11px; color:#8ab4ff; min-width:12px;">B</span>
         <select id="compare-b" style="flex:1; padding:4px; background:#1a2535; color:#c8d8e8; border:1px solid #2a3a50; border-radius:4px; font-size:12px; cursor:pointer;">
-          <option value="viewer_data.json">Today (2026)</option>
-          <option value="viewer_data_2028.json">2028 — Santa Monica Airport Exodus</option>
-          <option value="viewer_data_2029.json" selected>2029 — Santa Monica Airport Closed</option>
-          <option value="viewer_data_2033.json">2033 — Barker Hangar turns into a Drone Hub</option>
-          <option value="viewer_data_2038.json">2038 — Drone Hubs Across LA Basin</option>
+          <option value="viewer_data.json">2026 — Today</option>
+          <option value="viewer_data_2028.json">2028 — SMO Exodus</option>
+          <option value="viewer_data_2029.json" selected>2029 — SMO Closed</option>
+          <option value="viewer_data_2033.json">2033 — Barker Hangar Turns Drone Hub</option>
+          <option value="viewer_data_2038.json">2038 — Drone Hubs Spring</option>
+          <option value="viewer_data_2066.json">2066 — The Cross</option>
         </select>
       </div>
     </div>
@@ -1335,6 +1366,12 @@ document.getElementById('sidebar-toggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('collapsed');
   document.getElementById('sidebar-toggle').classList.toggle('collapsed');
 });
+
+// Auto-collapse sidebar on mobile
+if (window.innerWidth <= 768) {
+  document.getElementById('sidebar').classList.add('collapsed');
+  document.getElementById('sidebar-toggle').classList.add('collapsed');
+}
 
 init().catch(err => {
   document.getElementById('load-status').textContent = 'Error: ' + err.message;
