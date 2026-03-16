@@ -378,22 +378,6 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
       <button class="cat-btn active" id="filter-all" style="flex:1;">All</button>
       <button class="cat-btn" id="filter-none" style="flex:1;">None</button>
     </div>
-    <div class="parent-cat" id="parent-manned">
-      <div class="parent-cat-header" data-parent="manned">
-        <span class="parent-cat-arrow">&#9662;</span>
-        <span class="parent-cat-label">Manned Aircraft</span>
-        <span class="parent-cat-toggle" data-parent="manned" title="Toggle all manned">&#10003;</span>
-      </div>
-      <div class="cat-row" id="cat-buttons-manned"></div>
-    </div>
-    <div class="parent-cat" id="parent-drone">
-      <div class="parent-cat-header" data-parent="drone">
-        <span class="parent-cat-arrow">&#9662;</span>
-        <span class="parent-cat-label">Drone</span>
-        <span class="parent-cat-toggle" data-parent="drone" title="Toggle all drones">&#10003;</span>
-      </div>
-      <div class="cat-row" id="cat-buttons-drone"></div>
-    </div>
     <input type="text" id="type-search" placeholder="Search types...">
     <div id="type-list"></div>
   </div>
@@ -1093,112 +1077,22 @@ function buildTypeFilter() {
   if (!DATA) return;
   const types = DATA.types;
 
-  // Parent categories: manned vs drone
-  const mannedCats = [
-    { key: 'commercial', label: 'Commercial' },
-    { key: 'ga', label: 'GA' },
-    { key: 'helicopter', label: 'Helicopter' },
-    { key: 'military', label: 'Military' },
-    { key: 'other', label: 'Other' },
-  ];
-  const droneCats = [
-    { key: 'drone', label: 'Wing Drone' },
-  ];
-
-  function getTypesForCat(catKey) {
-    const s = new Set();
-    for (const [t, info] of Object.entries(types)) {
-      if (info.category === catKey) s.add(t);
-    }
-    return s;
-  }
-  function getTypesForParent(parentKey) {
-    const cats = parentKey === 'manned' ? mannedCats : droneCats;
-    const s = new Set();
-    for (const cat of cats) {
-      for (const t of getTypesForCat(cat.key)) s.add(t);
-    }
-    // "other" and "UNKNOWN" go to manned
-    if (parentKey === 'manned') {
-      for (const [t, info] of Object.entries(types)) {
-        if (!['drone'].includes(info.category)) s.add(t);
-      }
-      s.add('UNKNOWN');
-    }
-    return s;
-  }
-
-  function clearAllActive() {
-    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('filter-all').classList.remove('active');
-    document.getElementById('filter-none').classList.remove('active');
-  }
-
-  function buildCatButtons(container, cats) {
-    container.innerHTML = '';
-    for (const cat of cats) {
-      const btn = document.createElement('button');
-      btn.className = 'cat-btn';
-      btn.textContent = cat.label;
-      btn.onclick = () => {
-        clearAllActive();
-        btn.classList.add('active');
-        activeTypes = getTypesForCat(cat.key);
-        updateTypeCheckboxes();
-        requestRender();
-      };
-      container.appendChild(btn);
-    }
-  }
-
-  buildCatButtons(document.getElementById('cat-buttons-manned'), mannedCats);
-  buildCatButtons(document.getElementById('cat-buttons-drone'), droneCats);
-
   // All / None buttons
   document.getElementById('filter-all').onclick = () => {
-    clearAllActive();
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('filter-all').classList.add('active');
     activeTypes = new Set(Object.keys(types));
     activeTypes.add('UNKNOWN');
-    updateTypeCheckboxes();
+    renderTypeList(document.getElementById('type-search').value.toUpperCase());
     requestRender();
   };
   document.getElementById('filter-none').onclick = () => {
-    clearAllActive();
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('filter-none').classList.add('active');
     activeTypes = new Set();
-    updateTypeCheckboxes();
+    renderTypeList(document.getElementById('type-search').value.toUpperCase());
     requestRender();
   };
-
-  // Parent toggle buttons (checkmark = select all in parent)
-  document.querySelectorAll('.parent-cat-toggle').forEach(tog => {
-    tog.onclick = (e) => {
-      e.stopPropagation();
-      clearAllActive();
-      const parent = tog.dataset.parent;
-      const parentTypes = getTypesForParent(parent);
-      // Toggle: if all parent types are active, remove them; otherwise add them
-      const allOn = [...parentTypes].every(t => activeTypes.has(t));
-      if (allOn) {
-        for (const t of parentTypes) activeTypes.delete(t);
-      } else {
-        for (const t of parentTypes) activeTypes.add(t);
-      }
-      updateTypeCheckboxes();
-      requestRender();
-    };
-  });
-
-  // Collapse/expand parent categories
-  document.querySelectorAll('.parent-cat-header').forEach(hdr => {
-    hdr.addEventListener('click', (e) => {
-      if (e.target.classList.contains('parent-cat-toggle')) return;
-      hdr.classList.toggle('collapsed');
-      const catRow = hdr.nextElementSibling;
-      catRow.style.display = hdr.classList.contains('collapsed') ? 'none' : 'flex';
-    });
-  });
 
   // Type list
   renderTypeList('');
@@ -1216,6 +1110,18 @@ function buildTypeFilter() {
 
 // Track collapsed state across re-renders
 const typeGroupCollapsed = { manned: true, drone: true };
+
+// Sub-category definitions
+const MANNED_SUBCATS = [
+  { key: 'commercial', label: 'Commercial' },
+  { key: 'ga', label: 'GA' },
+  { key: 'helicopter', label: 'Helicopter' },
+  { key: 'military', label: 'Military' },
+  { key: 'other', label: 'Other' },
+];
+const DRONE_SUBCATS = [
+  { key: 'drone', label: 'Wing Drone' },
+];
 
 function renderTypeList(filter) {
   const container = document.getElementById('type-list');
@@ -1258,12 +1164,13 @@ function renderTypeList(filter) {
     return row;
   }
 
-  function buildGroup(key, label, items) {
+  function buildGroup(key, label, items, subcats) {
     const filtered = applyFilter(items);
     if (filtered.length === 0) return;
 
     const totalFlights = filtered.reduce((s, [, info]) => s + info.flights, 0);
 
+    // Group header
     const header = document.createElement('div');
     header.className = 'type-group-header' + (typeGroupCollapsed[key] ? ' collapsed' : '');
 
@@ -1281,23 +1188,48 @@ function renderTypeList(filter) {
     header.appendChild(countSpan);
     container.appendChild(header);
 
-    const itemsDiv = document.createElement('div');
-    itemsDiv.style.display = typeGroupCollapsed[key] ? 'none' : 'block';
+    // Collapsible body
+    const body = document.createElement('div');
+    body.style.display = typeGroupCollapsed[key] ? 'none' : 'block';
 
-    for (const [type, info] of filtered) {
-      itemsDiv.appendChild(buildTypeRow(type, info));
+    // Sub-category filter buttons
+    if (subcats.length > 1) {
+      const btnRow = document.createElement('div');
+      btnRow.className = 'cat-row';
+      btnRow.style.marginBottom = '4px';
+      for (const subcat of subcats) {
+        const subcatTypes = new Set(filtered.filter(([, info]) => info.category === subcat.key).map(([t]) => t));
+        if (subcatTypes.size === 0) continue;
+        const btn = document.createElement('button');
+        btn.className = 'cat-btn';
+        btn.textContent = subcat.label;
+        btn.onclick = () => {
+          document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeTypes = subcatTypes;
+          renderTypeList(document.getElementById('type-search').value.toUpperCase());
+          requestRender();
+        };
+        btnRow.appendChild(btn);
+      }
+      body.appendChild(btnRow);
     }
-    container.appendChild(itemsDiv);
+
+    // Type checkboxes
+    for (const [type, info] of filtered) {
+      body.appendChild(buildTypeRow(type, info));
+    }
+    container.appendChild(body);
 
     header.addEventListener('click', () => {
       typeGroupCollapsed[key] = !typeGroupCollapsed[key];
       header.classList.toggle('collapsed');
-      itemsDiv.style.display = typeGroupCollapsed[key] ? 'none' : 'block';
+      body.style.display = typeGroupCollapsed[key] ? 'none' : 'block';
     });
   }
 
-  buildGroup('manned', 'Manned Aircraft', manned);
-  buildGroup('drone', 'Drone', drone);
+  buildGroup('manned', 'Manned Aircraft', manned, MANNED_SUBCATS);
+  buildGroup('drone', 'Drone', drone, DRONE_SUBCATS);
 }
 
 function updateTypeCheckboxes() {
