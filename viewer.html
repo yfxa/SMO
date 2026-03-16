@@ -176,6 +176,15 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
 .type-item:hover { color: #fff; }
 .type-item input { accent-color: #4a8aff; }
 .type-item .count { color: #4a6a8a; margin-left: auto; font-size: 10px; }
+.type-group-header {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 0 3px; cursor: pointer; user-select: none;
+  font-size: 10px; font-weight: 600; color: #6a8aaa; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.type-group-header:hover { color: #8ab4ff; }
+.type-group-arrow { font-size: 9px; color: #5a7a9a; transition: transform 0.2s; display: inline-block; }
+.type-group-header.collapsed .type-group-arrow { transform: rotate(-90deg); }
+.type-group-count { color: #4a6a8a; font-size: 9px; font-weight: 400; margin-left: auto; }
 
 #status {
   position: absolute; bottom: 16px; left: 180px;
@@ -1205,6 +1214,9 @@ function buildTypeFilter() {
   }
 }
 
+// Track collapsed state across re-renders
+const typeGroupCollapsed = { manned: true, drone: true };
+
 function renderTypeList(filter) {
   const container = document.getElementById('type-list');
   container.innerHTML = '';
@@ -1213,9 +1225,16 @@ function renderTypeList(filter) {
   const sorted = Object.entries(types)
     .sort((a, b) => b[1].count - a[1].count);
 
-  for (const [type, info] of sorted) {
-    if (filter && !type.toUpperCase().includes(filter)) continue;
+  // Split into manned vs drone
+  const manned = sorted.filter(([t, info]) => info.category !== 'drone');
+  const drone = sorted.filter(([t, info]) => info.category === 'drone');
 
+  function applyFilter(list) {
+    if (!filter) return list;
+    return list.filter(([t]) => (t || 'UNKNOWN').toUpperCase().includes(filter));
+  }
+
+  function buildTypeRow(type, info) {
     const row = document.createElement('label');
     row.className = 'type-item';
     const cb = document.createElement('input');
@@ -1236,8 +1255,49 @@ function renderTypeList(filter) {
     row.appendChild(cb);
     row.appendChild(name);
     row.appendChild(count);
-    container.appendChild(row);
+    return row;
   }
+
+  function buildGroup(key, label, items) {
+    const filtered = applyFilter(items);
+    if (filtered.length === 0) return;
+
+    const totalFlights = filtered.reduce((s, [, info]) => s + info.flights, 0);
+
+    const header = document.createElement('div');
+    header.className = 'type-group-header' + (typeGroupCollapsed[key] ? ' collapsed' : '');
+
+    const arrow = document.createElement('span');
+    arrow.className = 'type-group-arrow';
+    arrow.innerHTML = '&#9662;';
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = label;
+    const countSpan = document.createElement('span');
+    countSpan.className = 'type-group-count';
+    countSpan.textContent = `${filtered.length} types · ${totalFlights} flights`;
+
+    header.appendChild(arrow);
+    header.appendChild(labelSpan);
+    header.appendChild(countSpan);
+    container.appendChild(header);
+
+    const itemsDiv = document.createElement('div');
+    itemsDiv.style.display = typeGroupCollapsed[key] ? 'none' : 'block';
+
+    for (const [type, info] of filtered) {
+      itemsDiv.appendChild(buildTypeRow(type, info));
+    }
+    container.appendChild(itemsDiv);
+
+    header.addEventListener('click', () => {
+      typeGroupCollapsed[key] = !typeGroupCollapsed[key];
+      header.classList.toggle('collapsed');
+      itemsDiv.style.display = typeGroupCollapsed[key] ? 'none' : 'block';
+    });
+  }
+
+  buildGroup('manned', 'Manned Aircraft', manned);
+  buildGroup('drone', 'Drone', drone);
 }
 
 function updateTypeCheckboxes() {
