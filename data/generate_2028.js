@@ -2,11 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 // ============================================================
-// 2028 SMO PEAK TRAFFIC SCENARIO
+// 2028 SMO PEAK TRAFFIC + LA OLYMPICS SCENARIO
 // Santa Monica Airport announced closure in 2029.
 // All based aircraft are ferrying out to new home airports.
 // Pattern traffic surges as pilots do final flights.
-// Result: SMO traffic at an all-time high.
+// PLUS: 2028 LA Olympics drives massive helicopter/security
+// traffic, TFRs over venues restrict GA, LAX surges with
+// international visitors.
 // ============================================================
 
 const inputPath = path.join(__dirname, 'viewer_data.json');
@@ -322,10 +324,240 @@ for (let i = 0; i < returnCount; i++) {
 console.log(`  Added ${returnAdded} return ferry flights to SMO`);
 
 // ============================================================
-// STEP 5: Amplify LAX commercial traffic (+5% by 2028)
+// STEP 5: LA OLYMPICS — Temporary Flight Restrictions (TFRs)
+// FAA issues TFRs over major Olympic venues during the games.
+// GA flights are stripped of points inside TFR zones.
+// ============================================================
+const OLYMPIC_VENUES = [
+  { name: 'SoFi Stadium',       lat: 33.9535, lon: -118.3392, radius: 180 }, // Opening/closing, football
+  { name: 'LA Coliseum',        lat: 34.0141, lon: -118.2879, radius: 150 }, // Track & field
+  { name: 'Crypto.com Arena',   lat: 34.0430, lon: -118.2673, radius: 120 }, // Basketball, gymnastics
+  { name: 'Rose Bowl',          lat: 34.1613, lon: -118.1676, radius: 150 }, // Soccer
+  { name: 'Long Beach',         lat: 33.7701, lon: -118.1937, radius: 140 }, // Water polo, rowing
+  { name: 'Intuit Dome',        lat: 33.9580, lon: -118.3480, radius: 120 }, // Basketball
+  { name: 'Dedeaux Field/USC',  lat: 34.0210, lon: -118.2810, radius: 100 }, // Baseball, swimming
+].map(v => ({ ...v, enc: toEnc(v.lat, v.lon) }));
+
+console.log(`\n  Olympic TFR zones (${OLYMPIC_VENUES.length} venues):`);
+
+// Only GA (not helicopters, not commercial) gets restricted by TFRs
+const GA_ONLY = /^(C1[0-9]{2}|C2[0-9]{2}|P28[A-Z]|PA[0-9]{2}|BE[0-9]{2}|SR2[0-9]|DA[0-9]{2}|M20[A-Z]|PA32|PA34|AA5|RV[0-9]|SLG[0-9]|G2CA|TOBA|VENT|TRIN|LNCE|LGEZ|PC12|TBM[0-9]|E55P|CRUZ|CC11|S22T|P28R|P32R|C82R|BE36|BE58|C340|C414|P46T|SR20|SR22)/;
+
+function isInTFR(latEnc, lonEnc) {
+  for (const v of OLYMPIC_VENUES) {
+    if (dist(latEnc, lonEnc, v.enc) < v.radius) return true;
+  }
+  return false;
+}
+
+let tfrStripped = 0;
+let tfrFlightsRemoved = 0;
+const tfrFilteredFlights = [];
+
+for (const flight of allFlights) {
+  const type = flight.t || '';
+  const isGA = GA_ONLY.test(type) || type === '' || type === 'UNKNOWN';
+
+  if (!isGA) {
+    tfrFilteredFlights.push(flight);
+    continue;
+  }
+
+  // Strip GA points inside TFR zones
+  const newP = [];
+  for (let i = 0; i < flight.p.length; i += 2) {
+    if (isInTFR(flight.p[i], flight.p[i + 1])) {
+      tfrStripped++;
+      continue;
+    }
+    newP.push(flight.p[i], flight.p[i + 1]);
+  }
+
+  if (newP.length >= 4) {
+    tfrFilteredFlights.push({ t: flight.t, p: newP });
+  } else {
+    tfrFlightsRemoved++;
+  }
+}
+
+// Replace allFlights with TFR-filtered version
+allFlights.length = 0;
+allFlights.push(...tfrFilteredFlights);
+
+for (const v of OLYMPIC_VENUES) {
+  console.log(`    ${v.name}: lat=${v.lat}, lon=${v.lon}, r=${v.radius}`);
+}
+console.log(`    GA points stripped by TFRs: ${tfrStripped}`);
+console.log(`    GA flights removed (entirely in TFR): ${tfrFlightsRemoved}`);
+
+// ============================================================
+// STEP 6: LA OLYMPICS — Helicopter surge
+// News/media helicopters orbiting venues, LAPD security patrols,
+// VIP shuttles between venues, and inter-venue media hops.
+// ============================================================
+const HELI_TYPES = ['EC35', 'AS50', 'B407', 'R44', 'B06', 'B429', 'EC45', 'S76'];
+const SECURITY_TYPES = ['H60', 'UH60', 'B412']; // Black Hawks, military security
+
+// News/media helicopter orbits around each venue
+const MEDIA_ORBITS_PER_VENUE = 12;
+let mediaHelisAdded = 0;
+
+for (const venue of OLYMPIC_VENUES) {
+  for (let h = 0; h < MEDIA_ORBITS_PER_VENUE; h++) {
+    const heliType = HELI_TYPES[Math.floor(rand() * HELI_TYPES.length)];
+    const orbitRadius = venue.radius * (0.8 + rand() * 0.6); // just outside TFR
+    const numPts = 14 + Math.floor(rand() * 8);
+    const startAngle = rand() * Math.PI * 2;
+    const arcSpan = Math.PI * (0.8 + rand() * 1.2); // partial to full orbit
+
+    const points = [];
+    for (let i = 0; i < numPts; i++) {
+      const t = i / (numPts - 1);
+      const angle = startAngle + arcSpan * t;
+      const r = orbitRadius + (rand() - 0.5) * 30;
+      const lat = Math.round(venue.enc[0] + Math.cos(angle) * r);
+      const lon = Math.round(venue.enc[1] + Math.sin(angle) * r);
+      points.push(lat, lon);
+    }
+
+    if (points.length >= 4) {
+      allFlights.push({ t: heliType, p: points });
+      mediaHelisAdded++;
+    }
+  }
+}
+
+console.log(`\n  Olympic helicopter traffic:`);
+console.log(`    Media orbits: ${mediaHelisAdded}`);
+
+// VIP/shuttle helicopter flights between venues
+const VIP_SHUTTLE_COUNT = 80;
+let vipShuttleAdded = 0;
+
+for (let s = 0; s < VIP_SHUTTLE_COUNT; s++) {
+  const fromVenue = OLYMPIC_VENUES[Math.floor(rand() * OLYMPIC_VENUES.length)];
+  let toVenue = OLYMPIC_VENUES[Math.floor(rand() * OLYMPIC_VENUES.length)];
+  while (toVenue === fromVenue) {
+    toVenue = OLYMPIC_VENUES[Math.floor(rand() * OLYMPIC_VENUES.length)];
+  }
+
+  const heliType = HELI_TYPES[Math.floor(rand() * HELI_TYPES.length)];
+
+  const dLat = toVenue.enc[0] - fromVenue.enc[0];
+  const dLon = toVenue.enc[1] - fromVenue.enc[1];
+  const flightDist = Math.sqrt(dLat * dLat + dLon * dLon);
+  const numPts = Math.max(8, Math.min(20, Math.round(flightDist / 20)));
+  const curveBias = (rand() - 0.5) * 0.25;
+
+  const points = [];
+  for (let p = 0; p < numPts; p++) {
+    const t = p / (numPts - 1);
+    const perpLat = -dLon / flightDist;
+    const perpLon = dLat / flightDist;
+    const curveAmount = curveBias * flightDist * Math.sin(t * Math.PI);
+    const jitLat = (rand() - 0.5) * 15;
+    const jitLon = (rand() - 0.5) * 15;
+
+    const lat = Math.round(fromVenue.enc[0] + dLat * t + perpLat * curveAmount + jitLat);
+    const lon = Math.round(fromVenue.enc[1] + dLon * t + perpLon * curveAmount + jitLon);
+    points.push(lat, lon);
+  }
+
+  if (points.length >= 4) {
+    allFlights.push({ t: heliType, p: points });
+    vipShuttleAdded++;
+  }
+}
+
+console.log(`    VIP shuttles between venues: ${vipShuttleAdded}`);
+
+// LAPD / security helicopter patrols — wide sweeps across the basin
+const SECURITY_PATROL_COUNT = 40;
+let securityAdded = 0;
+
+for (let s = 0; s < SECURITY_PATROL_COUNT; s++) {
+  const secType = SECURITY_TYPES[Math.floor(rand() * SECURITY_TYPES.length)];
+  // Pick 2-3 venues to patrol between, creating wide sweeping paths
+  const numWaypoints = 2 + Math.floor(rand() * 2);
+  const waypoints = [];
+  for (let w = 0; w < numWaypoints; w++) {
+    const v = OLYMPIC_VENUES[Math.floor(rand() * OLYMPIC_VENUES.length)];
+    waypoints.push(v.enc);
+  }
+
+  const numPts = 12 + Math.floor(rand() * 10);
+  const points = [];
+
+  for (let i = 0; i < numPts; i++) {
+    const t = i / (numPts - 1);
+    // Interpolate between waypoints
+    const segTotal = waypoints.length - 1;
+    const segFloat = t * segTotal;
+    const segIdx = Math.min(Math.floor(segFloat), segTotal - 1);
+    const segT = segFloat - segIdx;
+
+    const fromWP = waypoints[segIdx];
+    const toWP = waypoints[Math.min(segIdx + 1, waypoints.length - 1)];
+
+    const lat = Math.round(fromWP[0] + (toWP[0] - fromWP[0]) * segT + (rand() - 0.5) * 40);
+    const lon = Math.round(fromWP[1] + (toWP[1] - fromWP[1]) * segT + (rand() - 0.5) * 40);
+    points.push(lat, lon);
+  }
+
+  if (points.length >= 4) {
+    allFlights.push({ t: secType, p: points });
+    securityAdded++;
+  }
+}
+
+console.log(`    Security patrols: ${securityAdded}`);
+
+// LAX ↔ venue VIP helicopter shuttles (dignitaries from airport to events)
+const LAX = { lat: 33.9425, lon: -118.4081 };
+const laxEnc = toEnc(LAX.lat, LAX.lon);
+const LAX_VIP_COUNT = 30;
+let laxVipAdded = 0;
+
+for (let s = 0; s < LAX_VIP_COUNT; s++) {
+  const venue = OLYMPIC_VENUES[Math.floor(rand() * OLYMPIC_VENUES.length)];
+  const heliType = HELI_TYPES[Math.floor(rand() * HELI_TYPES.length)];
+  const outbound = rand() > 0.4; // 60% from LAX to venue, 40% return
+
+  const fromEnc = outbound ? laxEnc : venue.enc;
+  const toEnc_ = outbound ? venue.enc : laxEnc;
+
+  const dLat = toEnc_[0] - fromEnc[0];
+  const dLon = toEnc_[1] - fromEnc[1];
+  const flightDist = Math.sqrt(dLat * dLat + dLon * dLon);
+  const numPts = Math.max(8, Math.min(18, Math.round(flightDist / 20)));
+  const curveBias = (rand() - 0.5) * 0.2;
+
+  const points = [];
+  for (let p = 0; p < numPts; p++) {
+    const t = p / (numPts - 1);
+    const perpLat = -dLon / flightDist;
+    const perpLon = dLat / flightDist;
+    const curveAmount = curveBias * flightDist * Math.sin(t * Math.PI);
+
+    const lat = Math.round(fromEnc[0] + dLat * t + perpLat * curveAmount + (rand() - 0.5) * 12);
+    const lon = Math.round(fromEnc[1] + dLon * t + perpLon * curveAmount + (rand() - 0.5) * 12);
+    points.push(lat, lon);
+  }
+
+  if (points.length >= 4) {
+    allFlights.push({ t: heliType, p: points });
+    laxVipAdded++;
+  }
+}
+
+console.log(`    LAX ↔ venue VIP shuttles: ${laxVipAdded}`);
+
+// ============================================================
+// STEP 7: Amplify LAX commercial traffic (+18% for Olympics)
+// Massive international visitor influx for the games
 // ============================================================
 const { amplifyLAX } = require('./amplify_lax');
-const laxExtra = amplifyLAX(allFlights, origin, 0.05, 9999);
+const laxExtra = amplifyLAX(allFlights, origin, 0.18, 9999);
 allFlights.push(...laxExtra.flights);
 
 // ============================================================
@@ -361,7 +593,7 @@ const output = {
   bounds: data.bounds,
   types: typeStats,
   flights: allFlights,
-  scenario: '2028_smo_peak',
+  scenario: '2028_smo_peak_olympics',
 };
 
 const json = JSON.stringify(output);
@@ -372,5 +604,7 @@ console.log(`  Original flights:     ${data.flights.length}`);
 console.log(`  Extra local SMO:      ${localAdded}`);
 console.log(`  Ferry flights out:    ${ferryAdded}`);
 console.log(`  Return ferries in:    ${returnAdded}`);
+console.log(`  Olympic helis:        ${mediaHelisAdded + vipShuttleAdded + securityAdded + laxVipAdded}`);
+console.log(`  TFR flights removed:  ${tfrFlightsRemoved}`);
 console.log(`  Total flights:        ${allFlights.length}`);
 console.log(`\nWrote ${outputPath} (${(json.length / 1024 / 1024).toFixed(1)} MB)`);
