@@ -327,7 +327,11 @@ body { background: #0a0e14; color: #c8d0dc; font-family: -apple-system, BlinkMac
     <h3>Color Gradient</h3>
     <div class="preset-row" id="gradient-presets"></div>
     <div class="gradient-preview" id="gradient-preview"></div>
-    <div id="color-stops"></div>
+    <div class="type-group-header collapsed" id="color-stops-toggle">
+      <span class="type-group-arrow">&#9662;</span>
+      <span>Color Stops</span>
+    </div>
+    <div id="color-stops" style="display:none;"></div>
   </div>
 
   <div class="panel">
@@ -1041,6 +1045,13 @@ function buildColorStopEditors() {
     container.appendChild(row);
   });
 }
+
+// Color stops collapse toggle
+document.getElementById('color-stops-toggle').addEventListener('click', function() {
+  this.classList.toggle('collapsed');
+  const stops = document.getElementById('color-stops');
+  stops.style.display = this.classList.contains('collapsed') ? 'none' : 'block';
+});
 
 // ============================================================
 // UI: SLIDERS
